@@ -8,44 +8,44 @@ import pytz
 from datetime import datetime
 
 class SupportModals(commands.Cog):
-    """Cog untuk handle support modals dan views."""
+    """Cog to handle support modals and views."""
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
 class SupportModal(Modal):
-    """Modal untuk user mengisi formulir support."""
+    """Modal for users to fill support form."""
     
     def __init__(self):
         super().__init__(
-            title="Hubungi Tim Support Kami",
-            timeout=600  # 10 menit
+            title="Contact Our Support Team",
+            timeout=600  # 10 minutes
         )
         
         self.name_input = TextInput(
-            label="Nama Anda",
-            placeholder="Masukkan nama lengkap Anda",
+            label="Your Name",
+            placeholder="Enter your full name",
             required=True,
             max_length=100
         )
         
         self.order_id_input = TextInput(
-            label="Nomor Order / Invoice",
-            placeholder="Contoh: #12345 atau INV-2024-001",
+            label="Order Number / Invoice",
+            placeholder="Example: #12345 or INV-2024-001",
             required=True,
             max_length=50
         )
         
         self.issue_type = TextInput(
-            label="Tipe Masalah",
-            placeholder="Contoh: Barang belum sampai, Cacat, Pembayaran, dll",
+            label="Issue Type",
+            placeholder="Example: Item not arrived, Defect, Payment, etc",
             required=True,
             max_length=100
         )
         
         self.description = TextInput(
-            label="Deskripsi Masalah",
-            placeholder="Jelaskan masalah Anda secara detail...",
+            label="Issue Description",
+            placeholder="Describe your issue in detail...",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=1000
@@ -57,19 +57,19 @@ class SupportModal(Modal):
         self.add_item(self.description)
     
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        """Handle submission dari modal."""
+        """Handle submission from modal."""
         try:
             # Defer interaction
             await interaction.response.defer(ephemeral=True)
             
-            # Ambil data dari input
+            # Get data from input
             name = self.name_input.value.strip()
             order_id = self.order_id_input.value.strip()
             issue_type = self.issue_type.value.strip()
             description = self.description.value.strip()
             discord_tag = f"{interaction.user.name}#{interaction.user.discriminator}"
             
-            # Simpan ke database
+            # Save to database
             db = get_db_manager()
             success, ticket_number = db.save_lead(
                 discord_tag=discord_tag,
@@ -80,22 +80,22 @@ class SupportModal(Modal):
             )
             
             if success:
-                # Konfirmasi ke user
+                # Confirm to user
                 confirm_embed = discord.Embed(
-                    title="✅ Ticket Dibuat Berhasil",
-                    description="Tim support kami akan menghubungi Anda segera.",
+                    title="✅ Ticket Created Successfully",
+                    description="Our support team will contact you soon.",
                     color=discord.Color.green()
                 )
-                confirm_embed.add_field(name="🎫 Nomor Ticket", value=f"#{ticket_number}", inline=False)
+                confirm_embed.add_field(name="🎫 Ticket Number", value=f"#{ticket_number}", inline=False)
                 confirm_embed.add_field(name="Order ID", value=order_id, inline=False)
-                confirm_embed.add_field(name="Masalah", value=issue_type, inline=False)
+                confirm_embed.add_field(name="Issue", value=issue_type, inline=False)
                 confirm_embed.add_field(
                     name="Status",
-                    value="⏳ Menunggu Tim Support",
+                    value="⏳ Waiting for Support Team",
                     inline=False
                 )
                 
-                # Notifikasi ke staff dan buat thread
+                # Notify staff and create thread
                 thread = await notify_staff(
                     user=interaction.user,
                     name=name,
@@ -106,29 +106,29 @@ class SupportModal(Modal):
                     ticket_number=ticket_number
                 )
                 
-                # Redirect user ke thread ticket mereka
+                # Redirect user to their ticket thread
                 if thread:
                     confirm_embed.add_field(
-                        name="🔗 Thread Ticket",
-                        value=f"[Klik di sini untuk membuka ticket Anda]({thread.jump_url})",
+                        name="🔗 Ticket Thread",
+                        value=f"[Click here to open your ticket]({thread.jump_url})",
                         inline=False
                     )
                 
                 await interaction.followup.send(embed=confirm_embed, ephemeral=True)
-                event_logger.info(f"Ticket baru dibuat oleh {discord_tag}: #{ticket_number}")
+                event_logger.info(f"New ticket created by {discord_tag}: #{ticket_number}")
             else:
                 error_embed = discord.Embed(
-                    title="❌ Terjadi Kesalahan",
-                    description="Gagal menyimpan data. Silakan coba lagi.",
+                    title="❌ An Error Occurred",
+                    description="Failed to save data. Please try again.",
                     color=discord.Color.red()
                 )
                 await interaction.followup.send(embed=error_embed, ephemeral=True)
                 
         except Exception as e:
-            event_logger.error(f"Error saat submit modal: {str(e)}")
+            event_logger.error(f"Error submitting modal: {str(e)}")
             error_embed = discord.Embed(
-                title="❌ Terjadi Kesalahan",
-                description="Terjadi error saat memproses request Anda.",
+                title="❌ An Error Occurred",
+                description="An error occurred while processing your request.",
                 color=discord.Color.red()
             )
             try:
@@ -146,93 +146,93 @@ async def notify_staff(
     discord_tag: str,
     ticket_number: int
 ):
-    """Buat private thread di support channel dan kirim notifikasi ke staff. Return thread object."""
+    """Create private thread in support channel and send notification to staff. Return thread object."""
     try:
         from handlers.commands import bot
         
         if not bot:
             return
         
-        # Ambil support channel untuk membuat thread
+        # Get support channel to create thread
         support_channel = bot.get_channel(SUPPORT_CHANNEL_ID)
         if not support_channel:
-            event_logger.warning(f"Support channel tidak ditemukan")
+            event_logger.warning("Support channel not found")
             return
         
-        # Ambil staff notification channel untuk notifikasi admin
+        # Get staff notification channel for admin notification
         staff_channel = bot.get_channel(STAFF_NOTIFICATION_CHANNEL_ID)
         if not staff_channel:
-            event_logger.warning(f"Staff notification channel tidak ditemukan")
+            event_logger.warning("Staff notification channel not found")
             return
         
-        # Buat private thread di support channel (hanya bisa dilihat oleh user, staff, dan bot)
+        # Create private thread in support channel (only visible to user, staff, and bot)
         thread_name = f"#{ticket_number} 🎫 {order_id} - {name[:15]}"
         thread = await support_channel.create_thread(
             name=thread_name,
             type=discord.ChannelType.private_thread,
-            reason=f"Support ticket #{ticket_number} untuk {name}"
+            reason=f"Support ticket #{ticket_number} for {name}"
         )
         
-        # Add user ke thread
+        # Add user to thread
         await thread.add_user(user)
         
         # Format timestamp
         tz = pytz.timezone('Asia/Jakarta')
         now = datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
         
-        # Kirim ticket info ke thread untuk user
+        # Send ticket info to thread for user
         user_embed = discord.Embed(
-            title="📋 Detail Ticket Support Anda",
-            description="Ticket Anda telah dibuat dan tim support kami akan segera membantu.",
+            title="📋 Your Support Ticket Details",
+            description="Your ticket has been created and our support team will assist you soon.",
             color=discord.Color.blue()
         )
-        user_embed.add_field(name="🎫 Nomor Ticket", value=f"#{ticket_number}", inline=False)
+        user_embed.add_field(name="🎫 Ticket Number", value=f"#{ticket_number}", inline=False)
         user_embed.add_field(name="📦 Order ID", value=order_id, inline=False)
-        user_embed.add_field(name="👤 Nama", value=name, inline=True)
-        user_embed.add_field(name="🏷️ Tipe Masalah", value=issue_type, inline=True)
-        user_embed.add_field(name="📝 Deskripsi", value=description, inline=False)
-        user_embed.add_field(name="⏰ Waktu Dibuat", value=now, inline=True)
+        user_embed.add_field(name="👤 Name", value=name, inline=True)
+        user_embed.add_field(name="🏷️ Issue Type", value=issue_type, inline=True)
+        user_embed.add_field(name="📝 Description", value=description, inline=False)
+        user_embed.add_field(name="⏰ Created", value=now, inline=True)
         user_embed.add_field(name="📊 Status", value="⏳ Pending", inline=True)
-        user_embed.set_footer(text="Tunggu sampai admin mengambil ticket Anda")
+        user_embed.set_footer(text="Wait for admin to take your ticket")
         
         await thread.send(embed=user_embed)
         
-        # Kirim view dengan unified close button (untuk user dan admin)
+        # Send view with unified close button (for user and admin)
         view = UnifiedTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
-        await thread.send("Anda dapat menutup ticket ini jika sudah selesai:", view=view)
+        await thread.send("You can close this ticket when resolved:", view=view)
         
-        # Kirim notifikasi ke staff channel dengan admin buttons
+        # Send notification to staff channel with admin buttons
         staff_embed = discord.Embed(
-            title="🎫 TICKET BARU MASUK",
+            title="🎫 NEW TICKET RECEIVED",
             description=f"User: {user.mention}",
             color=discord.Color.orange(),
             timestamp=datetime.now()
         )
         
-        staff_embed.add_field(name="🎫 Nomor Ticket", value=f"#{ticket_number}", inline=False)
-        staff_embed.add_field(name="👤 Nama", value=name, inline=False)
+        staff_embed.add_field(name="🎫 Ticket Number", value=f"#{ticket_number}", inline=False)
+        staff_embed.add_field(name="👤 Name", value=name, inline=False)
         staff_embed.add_field(name="📦 Order ID", value=order_id, inline=True)
-        staff_embed.add_field(name="🏷️ Tipe Masalah", value=issue_type, inline=True)
-        staff_embed.add_field(name="📝 Deskripsi", value=description[:300] + "..." if len(description) > 300 else description, inline=False)
+        staff_embed.add_field(name="🏷️ Issue Type", value=issue_type, inline=True)
+        staff_embed.add_field(name="📝 Description", value=description[:300] + "..." if len(description) > 300 else description, inline=False)
         staff_embed.add_field(name="👤 Discord Tag", value=discord_tag, inline=True)
-        staff_embed.add_field(name="⏰ Waktu", value=now, inline=True)
-        staff_embed.add_field(name="🔗 Link Thread", value=thread.jump_url, inline=False)
+        staff_embed.add_field(name="⏰ Time", value=now, inline=True)
+        staff_embed.add_field(name="🔗 Thread Link", value=thread.jump_url, inline=False)
         
-        # Buat view dengan admin buttons
+        # Create view with admin buttons
         admin_view = StaffTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
         
         await staff_channel.send(embed=staff_embed, view=admin_view)
-        event_logger.info(f"Ticket baru dibuat: #{ticket_number} - Order: {order_id} - Private thread: {thread.id}")
+        event_logger.info(f"New ticket created: #{ticket_number} - Order: {order_id} - Private thread: {thread.id}")
         
         return thread
         
     except Exception as e:
-        event_logger.error(f"Error saat notify staff: {str(e)}")
+        event_logger.error(f"Error notifying staff: {str(e)}")
         return None
 
 
 class UnifiedTicketView(View):
-    """View untuk user dan admin menutup ticket dengan akses berbeda."""
+    """View for user and admin to close ticket with different access levels."""
     
     def __init__(self, user_id: int, order_id: str, thread_id: int, ticket_number: int = 0):
         super().__init__(timeout=None)  # Permanent buttons
@@ -242,14 +242,14 @@ class UnifiedTicketView(View):
         self.ticket_number = ticket_number
     
     @discord.ui.button(
-        label="❌ Tutup Ticket",
+        label="❌ Close Ticket",
         style=discord.ButtonStyle.danger,
         custom_id="unified_close_ticket"
     )
     async def close_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """Tutup ticket - User atau Admin dengan akses berbeda."""
+        """Close ticket - User or Admin with different access."""
         try:
-            # Check status dari database
+            # Check status from database
             db = get_db_manager()
             all_leads = db.get_all_leads(limit=1000)
             ticket_status = None
@@ -258,137 +258,66 @@ class UnifiedTicketView(View):
                     ticket_status = lead.get('status')
                     break
             
-            # Tentukan apakah user atau admin yang klik
+            # Determine if user or admin clicked
             is_user = interaction.user.id == self.user_id
             
-            # USER: Hanya bisa close jika status masih PENDING
+            # USER: Can only close if status is still PENDING
             if is_user:
                 if ticket_status == 'IN_PROGRESS':
                     await interaction.response.send_message(
-                        "❌ Ticket sedang ditangani oleh staff. Tunggu staff untuk menutup ticket.",
+                        "❌ Ticket is being handled by staff. Wait for staff to close the ticket.",
                         ephemeral=True
                     )
                     return
                 
                 await interaction.response.defer()
                 
-                # Update status ke "Closed" (ditutup oleh user)
+                # Update status to "Closed" (closed by user)
                 db.update_lead_status(self.order_id, "Closed")
                 
                 close_embed = discord.Embed(
-                    title="✅ Ticket Ditutup",
-                    description=f"Ticket #{self.ticket_number} telah ditutup oleh user.",
+                    title="✅ Ticket Closed",
+                    description=f"Ticket #{self.ticket_number} has been closed by user.",
                     color=discord.Color.green()
                 )
-                event_logger.info(f"Ticket #{self.ticket_number} ditutup oleh user {interaction.user}")
+                event_logger.info(f"Ticket #{self.ticket_number} closed by user {interaction.user}")
             
-            # ADMIN: Bisa close kapan saja
+            # ADMIN: Can close anytime
             else:
                 await interaction.response.defer()
                 
-                # Update status ke "Resolved" (diselesaikan oleh admin)
+                # Update status to "Resolved" (resolved by admin)
                 db.update_lead_status(self.order_id, "Resolved")
                 
                 close_embed = discord.Embed(
-                    title="🔒 Ticket Diselesaikan",
-                    description=f"Ticket #{self.ticket_number} telah diselesaikan oleh {interaction.user.mention}.",
+                    title="🔒 Ticket Resolved",
+                    description=f"Ticket #{self.ticket_number} has been resolved by {interaction.user.mention}.",
                     color=discord.Color.green()
                 )
-                event_logger.info(f"Ticket #{self.ticket_number} diselesaikan oleh admin {interaction.user}")
+                event_logger.info(f"Ticket #{self.ticket_number} resolved by admin {interaction.user}")
             
             button.disabled = True
             await interaction.message.edit(view=self)
             
-            # Archive dan lock thread
+            # Archive and lock thread
             thread = interaction.client.get_channel(self.thread_id)
             if thread:
                 await thread.send(embed=close_embed)
                 await thread.edit(archived=True, locked=True)
             
         except Exception as e:
-            event_logger.error(f"Error saat close ticket: {str(e)}")
+            event_logger.error(f"Error closing ticket: {str(e)}")
             error_embed = discord.Embed(
                 title="❌ Error",
-                description="Gagal menutup ticket. Silakan coba lagi.",
+                description="Failed to close ticket. Please try again.",
                 color=discord.Color.red()
             )
             await interaction.response.defer()
             await interaction.followup.send(embed=error_embed, ephemeral=True)
 
 
-class UserTicketView(View):
-    """View untuk user menutup ticket mereka sendiri."""
-    
-    def __init__(self, user_id: int, order_id: str, thread_id: int, ticket_number: int = 0):
-        super().__init__(timeout=None)  # Permanent buttons
-        self.user_id = user_id
-        self.order_id = order_id
-        self.thread_id = thread_id
-        self.ticket_number = ticket_number
-        self.staff_member = None  # Track jika ada staff yang ambil
-    
-    @discord.ui.button(
-        label="❌ Tutup Ticket Saya",
-        style=discord.ButtonStyle.danger,
-        custom_id="user_close_ticket"
-    )
-    async def user_close_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """User menutup ticket mereka sendiri (hanya jika belum diambil staff)."""
-        try:
-            # Pastikan hanya user yang bisa close ticket mereka
-            if interaction.user.id != self.user_id:
-                await interaction.response.send_message(
-                    "❌ Hanya pemilik ticket yang bisa menutup ticket ini!",
-                    ephemeral=True
-                )
-                return
-            
-            # Check status dari database - jika sudah IN_PROGRESS, staff sudah ambil
-            db = get_db_manager()
-            all_leads = db.get_all_leads(limit=1000)
-            ticket_status = None
-            for lead in all_leads:
-                if str(lead.get('order_id', '')).strip() == str(self.order_id).strip():
-                    ticket_status = lead.get('status')
-                    break
-            
-            # Jika status sudah IN_PROGRESS, staff sudah ambil - user tidak boleh close
-            if ticket_status == 'IN_PROGRESS':
-                await interaction.response.send_message(
-                    "❌ Ticket sedang ditangani oleh staff. Tunggu staff untuk menutup ticket.",
-                    ephemeral=True
-                )
-                return
-            
-            await interaction.response.defer()
-            
-            # Update status di database ke "Closed" (ditutup oleh user)
-            db.update_lead_status(self.order_id, "Closed")
-            
-            # Update embed dan disable button
-            close_embed = discord.Embed(
-                title="✅ Ticket Ditutup",
-                description=f"Ticket #{self.ticket_number} telah ditutup oleh user.",
-                color=discord.Color.green()
-            )
-            
-            button.disabled = True
-            await interaction.message.edit(view=self)
-            
-            # Archive dan lock thread
-            thread = interaction.client.get_channel(self.thread_id)
-            if thread:
-                await thread.send(embed=close_embed)
-                await thread.edit(archived=True, locked=True)
-            
-            event_logger.info(f"Ticket #{self.ticket_number} ditutup oleh user {interaction.user}")
-            
-        except Exception as e:
-            event_logger.error(f"Error saat user close ticket: {str(e)}")
-
-
 class StaffTicketView(View):
-    """View untuk staff mengambil dan mengelola ticket."""
+    """View for staff to take and manage tickets."""
     
     def __init__(self, user_id: int, order_id: str, thread_id: int, ticket_number: int = 0):
         super().__init__(timeout=None)  # Permanent buttons
@@ -396,20 +325,20 @@ class StaffTicketView(View):
         self.order_id = order_id
         self.thread_id = thread_id
         self.ticket_number = ticket_number
-        self.staff_member = None  # Track staff yang ambil
+        self.staff_member = None  # Track staff who took ticket
     
     @discord.ui.button(
-        label="✋ Ambil Ticket",
+        label="✋ Take Ticket",
         style=discord.ButtonStyle.primary,
         custom_id="staff_take_ticket"
     )
     async def take_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """Staff mengambil ticket."""
+        """Staff takes the ticket."""
         try:
-            # Check status ticket terlebih dahulu
+            # Check ticket status first
             db = get_db_manager()
             
-            # Get all leads dan cari dengan order_id
+            # Get all leads and find by order_id
             all_leads = db.get_all_leads(limit=1000)
             ticket_status = None
             for lead in all_leads:
@@ -417,10 +346,10 @@ class StaffTicketView(View):
                     ticket_status = lead.get('status')
                     break
             
-            # Jika status bukan PENDING, ticket sudah dihandle/ditutup
+            # If status is not PENDING, ticket is already handled/closed
             if ticket_status and ticket_status != 'PENDING':
                 await interaction.response.send_message(
-                    f"❌ Ticket ini sudah tidak dapat diambil (Status: {ticket_status}).",
+                    f"❌ This ticket cannot be taken anymore (Status: {ticket_status}).",
                     ephemeral=True
                 )
                 button.disabled = True
@@ -432,212 +361,54 @@ class StaffTicketView(View):
             staff_member = interaction.user
             user = await interaction.client.fetch_user(self.user_id)
             
-            # Update status di database
+            # Update status in database
             db = get_db_manager()
             db.update_lead_status(self.order_id, "IN_PROGRESS")
             
             # Update tracking
             self.staff_member = staff_member.id
             
-            # Add staff ke thread
+            # Add staff to thread
             thread = interaction.client.get_channel(self.thread_id)
             if thread:
                 await thread.add_user(staff_member)
                 
                 # Send intro message
                 intro_embed = discord.Embed(
-                    title="👤 Staff Mengambil Ticket",
-                    description=f"Staff {staff_member.mention} telah mengambil ticket Anda.",
+                    title="👤 Staff Taking Ticket",
+                    description=f"Staff {staff_member.mention} has taken your ticket.",
                     color=discord.Color.green()
                 )
-                intro_embed.add_field(name="📝 Keterangan", 
-                    value="Staff akan membantu Anda menyelesaikan masalah ini.",
+                intro_embed.add_field(name="📝 Note", 
+                    value="Staff will help you resolve this issue.",
                     inline=False)
                 
                 await thread.send(embed=intro_embed)
-                
-                # Update unified button message (button sudah ada di thread dari awal)
             
             # Update notification
             confirmation_embed = discord.Embed(
-                title="✅ Ticket Diambil",
-                description=f"Staff {staff_member.mention} telah mengambil ticket ini.",
+                title="✅ Ticket Taken",
+                description=f"Staff {staff_member.mention} has taken this ticket.",
                 color=discord.Color.green()
             )
             
-            # Disable take button, disable user close button
-            button.disabled = True
-            
-            # Disable semua buttons
+            # Disable all buttons
             for item in self.children:
                 item.disabled = True
             
             await interaction.message.edit(view=self)
             await interaction.followup.send(embed=confirmation_embed)
             
-            event_logger.info(f"Ticket {self.order_id} diambil oleh {staff_member}")
+            event_logger.info(f"Ticket {self.order_id} taken by {staff_member}")
             
         except Exception as e:
-            event_logger.error(f"Error saat staff take ticket: {str(e)}")
+            event_logger.error(f"Error staff taking ticket: {str(e)}")
             error_embed = discord.Embed(
                 title="❌ Error",
-                description="Gagal mengambil ticket. Silakan coba lagi.",
+                description="Failed to take ticket. Please try again.",
                 color=discord.Color.red()
             )
             await interaction.followup.send(embed=error_embed, ephemeral=True)
-
-
-class AdminCloseTicketView(View):
-    """View untuk admin menutup ticket (hanya di thread)."""
-    
-    def __init__(self, order_id: str, thread_id: int, ticket_number: int = 0):
-        super().__init__(timeout=None)
-        self.order_id = order_id
-        self.thread_id = thread_id
-        self.ticket_number = ticket_number
-    
-    @discord.ui.button(
-        label="🔒 Selesaikan Ticket",
-        style=discord.ButtonStyle.danger,
-        custom_id="admin_close_ticket"
-    )
-    async def close_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """Admin menutup ticket (hanya bisa di thread)."""
-        try:
-            await interaction.response.defer()
-            
-            # Update status di database ke "Resolved" (diselesaikan oleh admin)
-            db = get_db_manager()
-            db.update_lead_status(self.order_id, "Resolved")
-            
-            # Update button
-            close_embed = discord.Embed(
-                title="🔒 Ticket Diselesaikan",
-                description=f"Ticket #{self.ticket_number} telah diselesaikan oleh {interaction.user.mention}.",
-                color=discord.Color.green()
-            )
-            
-            button.disabled = True
-            await interaction.message.edit(view=self)
-            
-            # Archive thread
-            thread = interaction.client.get_channel(self.thread_id)
-            if thread:
-                await thread.send(embed=close_embed)
-                await thread.edit(archived=True, locked=True)
-            
-            event_logger.info(f"Ticket #{self.ticket_number} diselesaikan oleh {interaction.user}")
-            
-        except Exception as e:
-            event_logger.error(f"Error saat close ticket: {str(e)}")
-            error_embed = discord.Embed(
-                title="❌ Error",
-                description="Gagal menutup ticket. Silakan coba lagi.",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=error_embed, ephemeral=True)
-
-
-class TicketActionView(View):
-    """View untuk staff mengambil ticket."""
-    
-    def __init__(self, user_id: int, order_id: str):
-        super().__init__(timeout=3600)  # 1 jam
-        self.user_id = user_id
-        self.order_id = order_id
-    
-    @discord.ui.button(
-        label="✋ Ambil Ticket",
-        style=discord.ButtonStyle.primary,  
-        custom_id="take_ticket_button"
-    )
-    async def take_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """Handle ketika staff ambil ticket."""
-        try:
-            await interaction.response.defer()
-            
-            staff_member = interaction.user
-            user = await interaction.client.fetch_user(self.user_id)
-            
-            # Update status di database
-            db = get_db_manager()
-            db.update_lead_status(self.order_id, "IN_PROGRESS")
-            
-            # Buat private thread
-            thread_name = f"🎫 {self.order_id[:10]} - {user.name}"
-            thread = await interaction.channel.create_thread(
-                name=thread_name,
-                type=discord.ChannelType.private_thread,
-                reason=f"Support ticket {self.order_id}"
-            )
-            
-            # Add staff dan user ke thread
-            await thread.add_user(staff_member)
-            await thread.add_user(user)
-            
-            # Kirim intro message ke thread
-            intro_embed = discord.Embed(
-                title="Ticket Support Dibuka",
-                description=f"Staff: {staff_member.mention}\nUser: {user.mention}",
-                color=discord.Color.blue()
-            )
-            intro_embed.add_field(name="Order ID", value=self.order_id, inline=False)
-            
-            await thread.send(embed=intro_embed)
-            
-            # Update message di notification channel
-            confirmation_embed = discord.Embed(
-                title="✅ Ticket Diambil",
-                description=f"Staff {staff_member.mention} telah mengambil ticket ini.",
-                color=discord.Color.green()
-            )
-            
-            await interaction.followup.send(embed=confirmation_embed)
-            
-            # Disable button
-            button.disabled = True
-            await interaction.message.edit(view=self)
-            
-            event_logger.info(f"Ticket {self.order_id} diambil oleh {staff_member}")
-            
-        except Exception as e:
-            event_logger.error(f"Error saat ambil ticket: {str(e)}")
-            error_embed = discord.Embed(
-                title="❌ Error",
-                description="Gagal mengambil ticket. Silakan coba lagi.",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=error_embed, ephemeral=True)
-    
-    @discord.ui.button(
-        label="❌ Tutup Ticket",
-        style=discord.ButtonStyle.danger,
-        custom_id="close_ticket"
-    )
-    async def close_ticket(self, interaction: discord.Interaction, button: Button) -> None:
-        """Handle ketika ticket ditutup."""
-        try:
-            await interaction.response.defer()
-            
-            # Update status
-            db = get_db_manager()
-            db.update_lead_status(self.order_id, "RESOLVED")
-            
-            close_embed = discord.Embed(
-                title="❌ Ticket Ditutup",
-                description=f"Order {self.order_id} telah ditutup.",
-                color=discord.Color.red()
-            )
-            
-            await interaction.followup.send(embed=close_embed)
-            
-            event_logger.info(f"Ticket {self.order_id} ditutup")
-            
-        except Exception as e:
-            event_logger.error(f"Error saat tutup ticket: {str(e)}")
-            
-        except Exception as e:
-            event_logger.error(f"Error saat tutup ticket: {str(e)}")
 
 
 async def setup(bot: commands.Bot) -> None:

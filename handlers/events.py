@@ -5,14 +5,14 @@ from utils.logger import event_logger, bot_logger
 from config import LOGS_CHANNEL_ID
 
 class Events(commands.Cog):
-    """Event handlers untuk bot."""
+    """Event handlers for bot."""
     
     def __init__(self, bot):
         self.bot = bot
     
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        """Event ketika bot berhasil login."""
+        """Event when bot successfully logs in."""
         try:
             bot_logger.info(f"✅ Bot logged in as {self.bot.user}")
             bot_logger.info(f"Bot ID: {self.bot.user.id}")
@@ -41,8 +41,8 @@ class Events(commands.Cog):
         try:
             if isinstance(error, commands.MissingRequiredArgument):
                 embed = discord.Embed(
-                    title="❌ Argument Kurang",
-                    description=f"Gunakan: `!{ctx.command.name} {ctx.command.signature}`",
+                    title="❌ Missing Argument",
+                    description=f"Usage: `!{ctx.command.name} {ctx.command.signature}`",
                     color=discord.Color.red()
                 )
                 await ctx.send(embed=embed, delete_after=10)
@@ -54,7 +54,7 @@ class Events(commands.Cog):
             elif isinstance(error, commands.MissingPermissions):
                 embed = discord.Embed(
                     title="❌ Permission Denied",
-                    description="Anda tidak memiliki permission untuk command ini.",
+                    description="You don't have permission to use this command.",
                     color=discord.Color.red()
                 )
                 await ctx.send(embed=embed, delete_after=10)
@@ -63,31 +63,31 @@ class Events(commands.Cog):
                 event_logger.error(f"Command error: {str(error)}")
                 embed = discord.Embed(
                     title="❌ Error",
-                    description="Terjadi error saat memproses command Anda.",
+                    description="An error occurred while processing your command.",
                     color=discord.Color.red()
                 )
                 await ctx.send(embed=embed, delete_after=10)
         
         except Exception as e:
-            event_logger.error(f"Error di error handler: {str(e)}")
+            event_logger.error(f"Error in error handler: {str(e)}")
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
-        """Event ketika bot join server baru."""
+        """Event when bot joins a new server."""
         try:
             bot_logger.info(f"Bot joined new server: {guild.name} (ID: {guild.id})")
             event_logger.info(f"New server joined: {guild.name}")
         except Exception as e:
-            event_logger.error(f"Error di on_guild_join: {str(e)}")
+            event_logger.error(f"Error in on_guild_join: {str(e)}")
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
-        """Event ketika bot di-remove dari server."""
+        """Event when bot is removed from a server."""
         try:
             bot_logger.warning(f"Bot removed from server: {guild.name} (ID: {guild.id})")
             event_logger.warning(f"Server removed: {guild.name}")
         except Exception as e:
-            event_logger.error(f"Error di on_guild_remove: {str(e)}")
+            event_logger.error(f"Error in on_guild_remove: {str(e)}")
 
 async def setup(bot: commands.Bot) -> None:
     """Setup cog."""

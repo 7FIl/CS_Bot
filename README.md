@@ -1,65 +1,69 @@
 # Discord Customer Support Bot 🤖
 
-Kerangka kerja lengkap untuk membangun Discord Customer Support Bot yang terintegrasi dengan Google Sheets menggunakan Python.
+Complete framework for building a Discord Customer Support Bot integrated with Google Sheets using Python.
 
-## 📋 Fitur Utama
+## 📋 Key Features
 
-- ✅ **Menu Support Interaktif** - Buttons dan Modals yang user-friendly
-- ✅ **Google Sheets Integration** - Database yang mudah dikelola admin
-- ✅ **FAQ Management** - Kelola FAQ tanpa perlu coding
-- ✅ **Ticket System** - Sistem eskalasi dengan Private Thread
-- ✅ **Staff Notification** - Notifikasi real-time ke tim support
-- ✅ **Analytics** - Tracking performa support
-- ✅ **Logging System** - Audit trail lengkap semua aktivitas
+- ✅ **Interactive Support Menu** - User-friendly buttons and modals
+- ✅ **Google Sheets Integration** - Admin-manageable database
+- ✅ **FAQ Management** - Manage FAQs without coding
+- ✅ **Ticket System** - Escalation system with Private Threads
+- ✅ **Staff Notifications** - Real-time notifications to support team
+- ✅ **Analytics** - Track support performance
+- ✅ **Logging System** - Complete audit trail of all activities
 
 ## 🚀 Quick Start
 
-### Prerequisite
+### Prerequisites
 - Python 3.10+
-- Google Cloud Account (untuk Google Sheets API)
+- Google Cloud Account (for Google Sheets API)
 - Discord Server & Bot Token
 
-### 1. Clone Repository
+### Installation
+
 ```bash
-git clone <your-repo>
+# 1. Clone repository
+git clone https://github.com/7FIl/CS_Bot.git
 cd CS_Bot
-```
 
-### 2. Install Dependencies
-```bash
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Setup Google Cloud
-Lihat `SETUP_GUIDE.md` untuk langkah-langkah detail setup Google Sheets API dan Service Account.
-
-### 4. Konfigurasi Bot
-```bash
-# Copy .env.example ke .env
+# 3. Configure environment
 copy .env.example .env
+# Edit .env with your credentials
 
-# Edit .env dengan informasi Anda
-```
-
-### 5. Jalankan Bot
-```bash
+# 4. Run bot
 python main.py
 ```
 
-## 📁 Struktur Folder
+### 📖 Detailed Setup Guide
+
+**New to setting this up?** Follow our comprehensive guide:
+
+👉 **[See SETUP.md for complete installation instructions](SETUP.md)**
+
+The setup guide includes:
+- Google Sheets API configuration
+- Discord bot creation and permissions
+- Service account setup
+- Environment variables configuration
+- Testing and troubleshooting
+
+## 📁 Project Structure
 
 ```
 CS_Bot/
-├── main.py                 # Entry point bot
-├── config.py              # Konfigurasi utama
+├── main.py                 # Bot entry point
+├── config.py              # Main configuration
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Template environment variables
-├── SETUP_GUIDE.md        # Panduan setup lengkap
-├── README.md             # File ini
+├── SETUP.md              # Complete setup guide
+├── README.md             # This file
 │
 ├── handlers/
 │   ├── database.py       # Google Sheets manager
-│   ├── commands.py       # Semua discord commands
+│   ├── commands.py       # All discord commands
 │   ├── modals.py         # Form modal & ticket system
 │   └── events.py         # Discord event handlers
 │
@@ -74,32 +78,32 @@ CS_Bot/
 
 ## 💻 Commands
 
-| Command | Deskripsi | Permission |
-|---------|-----------|-----------|
-| `!support` | Buka menu support utama | Semua user |
-| `!faq` | Tampilkan daftar FAQ | Semua user |
-| `!reload` | Reload data dari Google Sheets | Admin |
-| `!stats` | Tampilkan statistik support | Admin |
+| Command | Description | Permission |
+|---------|-------------|-----------|
+| `!support` | Open main support menu | All users |
+| `!faq` | Display FAQ list | All users |
+| `!reload` | Reload data from Google Sheets | Admin |
+| `!stats` | Display support statistics | Admin |
 
-## 🔧 Struktur Google Sheets
+## 🔧 Google Sheets Structure
 
 ### Tab 1: FAQ
-Kelola pertanyaan yang sering diajakan
+Manage frequently asked questions
 
 | trigger_id | button_label | response_text |
 |-----------|--------------|---------------|
-| pricing_1 | Berapa Harga? | Harga kami mulai dari Rp 50.000... |
-| ship_1 | Pengiriman? | Kami kirim ke seluruh Indonesia... |
+| pricing_1 | What's the price? | Our prices start from $50... |
+| ship_1 | Shipping info? | We ship nationwide... |
 
 ### Tab 2: Leads
-Database semua ticket customer (auto-populated oleh bot)
+Customer ticket database (auto-populated by bot)
 
 | timestamp | discord_tag | name | order_id | issue_type | status |
 |-----------|------------|------|----------|-----------|--------|
-| 2024-12-18 10:30 | User#1234 | Budi | #12345 | Barang Belum Sampai | PENDING |
+| 2024-12-18 10:30 | User#1234 | John | #12345 | Item Not Arrived | PENDING |
 
 ### Tab 3: Analytics
-Data performa support (auto-logged oleh bot)
+Support performance data (auto-logged by bot)
 
 | date | total_tickets | unresolved_queries |
 |------|---------------|------------------|
@@ -107,33 +111,33 @@ Data performa support (auto-logged oleh bot)
 
 ## 🔐 Security
 
-- ✅ Use environment variables untuk semua secrets
-- ✅ Service Account credentials secure
-- ✅ Rate limiting built-in
-- ✅ Audit trail untuk semua aktivitas
+- ✅ Use environment variables for all secrets
+- ✅ Secure service account credentials
+- ✅ Built-in rate limiting
+- ✅ Audit trail for all activities
 
 ## 📊 Workflow
 
 ### User Flow
 ```
-1. User type !support atau klik support button
-2. Tampil menu dengan 3 opsi: FAQ, Chat, Status
-3. User pilih "Chat dengan Support"
-4. Modal form muncul untuk isi data
-5. Data disimpan ke Google Sheets
-6. Staff diberitahu via notification channel
-7. Staff ambil ticket → Private Thread dibuat
-8. Percakapan terjadi di private thread
-9. Staff tutup ticket → Status updated
+1. User types !support or clicks support button
+2. Menu appears with 3 options: FAQ, Chat, Status
+3. User selects "Contact Support"
+4. Modal form appears for data entry
+5. Data is saved to Google Sheets
+6. Staff is notified via notification channel
+7. Staff takes ticket → Private thread is created
+8. Conversation occurs in private thread
+9. Staff closes ticket → Status updated
 ```
 
 ### Admin Flow
 ```
-1. Admin buka Google Sheets Tab FAQ
-2. Edit/tambah FAQ tanpa perlu koding
-3. Di Discord, admin ketik !reload
-4. FAQ ter-update di bot
-5. User bisa lihat FAQ baru via !faq
+1. Admin opens Google Sheets FAQ tab
+2. Edit/add FAQ without coding
+3. In Discord, admin types !reload
+4. FAQ is updated in bot
+5. Users can view new FAQ via !faq
 ```
 
 ## 📈 Scalability
@@ -142,39 +146,32 @@ Data performa support (auto-logged oleh bot)
 - Handles concurrent support requests
 - Automatic daily log rotation
 - Efficient Google Sheets caching
-- Minimal API calls dengan smart caching
+- Minimal API calls with smart caching
 
 ## 🐛 Troubleshooting
 
-### Bot tidak respond
-- Cek token di .env
-- Cek Message Content Intent enabled
-- Lihat logs di folder `logs/`
+### Common Issues
 
-### Modal tidak muncul
-```bash
-pip install -U discord.py
-```
+- **Bot not responding** → Check `.env` configuration and bot permissions
+- **Google Sheets error** → Verify `credentials.json` and sheet sharing
+- **Modal not appearing** → Update discord.py: `pip install -U discord.py`
 
-### Google Sheets connection error
-- Pastikan credentials.json ada
-- Cek sheet sudah di-share ke service account email
-- Lihat `SETUP_GUIDE.md` untuk detail
+For detailed troubleshooting steps, see [SETUP.md](SETUP.md#6️⃣-troubleshooting)
 
 ## 📝 Logging
 
-Semua aktivitas dicatat di folder `logs/`:
+All activities are logged in `logs/` folder:
 - Daily log files: `bot_YYYY-MM-DD.log`
-- Separate loggers untuk Database, Events, Bot
+- Separate loggers for Database, Events, Bot
 - Console output + File output
 
 ## 🤝 Contributing
 
-Kontribusi welcome! Silakan:
+Contributions welcome! Please:
 1. Fork repository
-2. Buat feature branch
+2. Create feature branch
 3. Commit changes
-4. Push ke branch
+4. Push to branch
 5. Open Pull Request
 
 ## 📄 License
@@ -183,13 +180,12 @@ MIT License - Feel free to use for personal or commercial projects
 
 ## 📧 Support
 
-Untuk masalah atau pertanyaan:
-- Check `SETUP_GUIDE.md`
-- Lihat logs di folder `logs/`
-- Review code di `handlers/` folder
+For setup help and detailed documentation:
+- 📖 [Complete Setup Guide](SETUP.md)
+- 📂 Check logs in `logs/` folder
+- 💻 Review code in `handlers/` folder
 
 ---
 
-**Happy Coding! 🎉**
 
-*Built with ❤️ using discord.py dan gspread*
+*Built in python using discord.py and gspread*

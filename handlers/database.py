@@ -6,55 +6,55 @@ from config import GOOGLE_SHEETS_ID, CREDENTIALS_FILE, FAQ_TAB_NAME, LEADS_TAB_N
 from utils.logger import db_logger
 
 class GoogleSheetsManager:
-    """Manager untuk integrasi dengan Google Sheets."""
+    """Manager for Google Sheets integration."""
     
     def __init__(self):
-        """Inisialisasi koneksi Google Sheets."""
+        """Initialize Google Sheets connection."""
         try:
             self.scope = [
                 'https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            # Authenticate menggunakan service account
+            # Authenticate using service account
             credentials = ServiceAccountCredentials.from_json_keyfile_name(
                 CREDENTIALS_FILE, 
                 self.scope
             )
             self.client = gspread.authorize(credentials)
             
-            # Buka spreadsheet
+            # Open spreadsheet
             self.spreadsheet = self.client.open_by_key(GOOGLE_SHEETS_ID)
-            db_logger.info("Berhasil terhubung ke Google Sheets")
+            db_logger.info("Successfully connected to Google Sheets")
             
-            # Cache FAQ data saat startup
+            # Cache FAQ data on startup
             self.faq_cache = None
             self.reload_faq_cache()
             
         except FileNotFoundError:
-            db_logger.error(f"File credentials '{CREDENTIALS_FILE}' tidak ditemukan!")
+            db_logger.error(f"Credentials file '{CREDENTIALS_FILE}' not found!")
             raise
         except Exception as e:
-            db_logger.error(f"Error saat menginisialisasi Google Sheets: {str(e)}")
+            db_logger.error(f"Error initializing Google Sheets: {str(e)}")
             raise
     
     def reload_faq_cache(self):
-        """Reload FAQ cache dari Sheets."""
+        """Reload FAQ cache from Sheets."""
         try:
             faq_sheet = self.spreadsheet.worksheet(FAQ_TAB_NAME)
-            # Specify expected headers untuk menghindari duplicate header error
+            # Specify expected headers to avoid duplicate header error
             self.faq_cache = faq_sheet.get_all_records(expected_headers=['trigger_id', 'button_label', 'response_text'])
-            db_logger.info(f"FAQ cache di-reload. Total FAQ: {len(self.faq_cache)}")
+            db_logger.info(f"FAQ cache reloaded. Total FAQ: {len(self.faq_cache)}")
         except Exception as e:
-            db_logger.error(f"Error saat reload FAQ cache: {str(e)}")
+            db_logger.error(f"Error reloading FAQ cache: {str(e)}")
             self.faq_cache = []
     
     def get_faq_data(self, refresh: bool = False) -> list:
         """
-        Ambil data FAQ dari cache atau Sheets.
+        Get FAQ data from cache or Sheets.
         
         Args:
-            refresh: Jika True, refresh dari Sheets
+            refresh: If True, refresh from Sheets
             
         Returns:
             List of FAQ records
@@ -65,13 +65,13 @@ class GoogleSheetsManager:
     
     def find_faq_by_trigger(self, trigger_id: str) -> dict:
         """
-        Cari FAQ berdasarkan trigger_id.
+        Find FAQ by trigger_id.
         
         Args:
-            trigger_id: ID trigger button dari FAQ
+            trigger_id: FAQ trigger button ID
             
         Returns:
-            FAQ record atau None jika tidak ditemukan
+            FAQ record or None if not found
         """
         faq_data = self.get_faq_data()
         for faq in faq_data:
@@ -81,7 +81,7 @@ class GoogleSheetsManager:
     
     def get_next_ticket_number(self) -> int:
         """
-        Ambil nomor ticket berikutnya.
+        Get next ticket number.
         
         Returns:
             Ticket number
@@ -90,11 +90,11 @@ class GoogleSheetsManager:
             leads_sheet = self.spreadsheet.worksheet(LEADS_TAB_NAME)
             all_records = leads_sheet.get_all_records()
             
-            # Jika belum ada records, mulai dari 1
+            # If no records yet, start from 1
             if not all_records:
                 return 1
             
-            # Cari nomor tertinggi - gunakan 'ticket_number' sesuai header di sheet
+            # Find highest number - use 'ticket_number' matching sheet header
             max_number = 0
             for record in all_records:
                 try:
@@ -106,20 +106,20 @@ class GoogleSheetsManager:
             return max_number + 1
             
         except Exception as e:
-            db_logger.error(f"Error saat ambil next ticket number: {str(e)}")
+            db_logger.error(f"Error getting next ticket number: {str(e)}")
             return 1
     
     def save_lead(self, discord_tag: str, name: str, order_id: str, 
                   issue_type: str, status: str = "PENDING") -> tuple:
         """
-        Simpan data lead ke tab Leads.
+        Save lead data to Leads tab.
         
         Args:
-            discord_tag: Tag Discord user
-            name: Nama user
-            order_id: Order ID dari user
-            issue_type: Tipe masalah
-            status: Status ticket
+            discord_tag: User's Discord tag
+            name: User's name
+            order_id: User's order ID
+            issue_type: Issue type
+            status: Ticket status
             
         Returns:
             Tuple (success: bool, ticket_number: int)
@@ -127,65 +127,65 @@ class GoogleSheetsManager:
         try:
             leads_sheet = self.spreadsheet.worksheet(LEADS_TAB_NAME)
             
-            # Ambil nomor ticket berikutnya
+            # Get next ticket number
             ticket_number = self.get_next_ticket_number()
             
             # Format timestamp
             tz = pytz.timezone('Asia/Jakarta')
             timestamp = datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')
             
-            # Persiapkan data dengan urutan: timestamp, ticket_number, discord_tag, name, order_id, issue_type, status
+            # Prepare data in order: timestamp, ticket_number, discord_tag, name, order_id, issue_type, status
             row_data = [timestamp, ticket_number, discord_tag, name, order_id, issue_type, status]
             
-            # Append ke sheet
+            # Append to sheet
             leads_sheet.append_row(row_data)
-            db_logger.info(f"Lead baru disimpan: #{ticket_number} {name} ({order_id})")
+            db_logger.info(f"New lead saved: #{ticket_number} {name} ({order_id})")
             return (True, ticket_number)
             
         except Exception as e:
-            db_logger.error(f"Error saat menyimpan lead: {str(e)}")
+            db_logger.error(f"Error saving lead: {str(e)}")
             return (False, 0)
     
     def update_lead_status(self, order_id: str, new_status: str) -> bool:
         """
-        Update status lead berdasarkan order_id.
+        Update lead status by order_id.
         
         Args:
-            order_id: Order ID untuk diupdate
-            new_status: Status baru (PENDING, IN_PROGRESS, RESOLVED, CLOSED)
+            order_id: Order ID to update
+            new_status: New status (PENDING, IN_PROGRESS, RESOLVED, CLOSED)
             
         Returns:
-            True jika berhasil, False jika gagal
+            True if successful, False if failed
         """
         try:
             leads_sheet = self.spreadsheet.worksheet(LEADS_TAB_NAME)
             
-            # Cari row dengan order_id
+            # Find row with order_id
             all_records = leads_sheet.get_all_records()
-            for idx, record in enumerate(all_records, start=2):  # start=2 karena header di row 1
+            for idx, record in enumerate(all_records, start=2):  # start=2 because header is in row 1
                 if str(record.get('order_id', '')).strip() == str(order_id).strip():
                     # Column 7 = status (timestamp, ticket_number, discord_tag, name, order_id, issue_type, status)
                     leads_sheet.update_cell(idx, 7, new_status)
-                    db_logger.info(f"Status lead {order_id} diupdate menjadi {new_status}")
+                    db_logger.info(f"Lead status {order_id} updated to {new_status}")
                     return True
             
-            db_logger.warning(f"Order ID {order_id} tidak ditemukan")
+            db_logger.warning(f"Order ID {order_id} not found")
             return False
             
         except Exception as e:
-            db_logger.error(f"Error saat update status lead: {str(e)}")
+            db_logger.error(f"Error updating lead status: {str(e)}")
             return False
     
     def log_analytics(self, total_tickets: int, unresolved_queries: int) -> bool:
         """
-        Catat data analytics.
+        Log analytics data.
         
         Args:
-            total_tickets: Total tiket hari ini
-            unresolved_queries: Total query yang belum selesai
+            total_tickets: Total tickets today
+            unresolved_queries: Total unresolved queries
             
         Returns:
-            True jika berhasil, False jika gagal
+            True if successful, False if failed
         """
         try:
             analytics_sheet = self.spreadsheet.worksheet(ANALYTICS_TAB_NAME)
@@ -198,15 +198,15 @@ class GoogleSheetsManager:
             return True
             
         except Exception as e:
-            db_logger.error(f"Error saat log analytics: {str(e)}")
+            db_logger.error(f"Error logging analytics: {str(e)}")
             return False
     
     def get_all_leads(self, limit: int = 50) -> list:
         """
-        Ambil data semua leads (untuk reporting).
+        Get all leads data (for reporting).
         
         Args:
-            limit: Jumlah maksimal records yang diambil
+            limit: Maximum number of records to retrieve
             
         Returns:
             List of lead records
@@ -217,20 +217,20 @@ class GoogleSheetsManager:
             return all_records[-limit:] if len(all_records) > limit else all_records
             
         except Exception as e:
-            db_logger.error(f"Error saat ambil leads: {str(e)}")
+            db_logger.error(f"Error getting leads: {str(e)}")
             return []
 
 # Global instance
 db_manager = None
 
 def init_db_manager() -> GoogleSheetsManager:
-    """Inisialisasi database manager global."""
+    """Initialize global database manager."""
     global db_manager
     db_manager = GoogleSheetsManager()
     return db_manager
 
 def get_db_manager() -> GoogleSheetsManager:
-    """Ambil instance database manager."""
+    """Get database manager instance."""
     global db_manager
     if db_manager is None:
         db_manager = init_db_manager()

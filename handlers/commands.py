@@ -7,10 +7,10 @@ from utils.logger import event_logger
 import pytz
 from datetime import datetime
 
-bot = None  # Global bot instance untuk digunakan di modals.py
+bot = None  # Global bot instance for use in modals.py
 
 class SupportCommands(commands.Cog):
-    """Commands untuk support system."""
+    """Commands for support system."""
     
     def __init__(self, bot_instance):
         self.bot = bot_instance
@@ -19,56 +19,56 @@ class SupportCommands(commands.Cog):
     
     @commands.command(
         name='support',
-        description='Buka menu support utama',
-        help='Tampilkan menu support dengan berbagai pilihan bantuan'
+        description='Open main support menu',
+        help='Display support menu with various help options'
     )
     async def support_menu(self, ctx: commands.Context) -> None:
-        """Command untuk menampilkan menu support utama."""
+        """Command to display main support menu."""
         try:
-            # Buat view dengan buttons
+            # Create view with buttons
             view = SupportMenuView()
             
-            # Embed utama
+            # Main embed
             embed = discord.Embed(
-                title="🎯 Pusat Support Pelanggan",
-                description="Pilih salah satu opsi di bawah untuk mendapatkan bantuan:",
+                title="🎯 Customer Support Center",
+                description="Choose one of the options below to get help:",
                 color=discord.Color.blue()
             )
             
             embed.add_field(
                 name="📖 FAQ",
-                value="Baca jawaban dari pertanyaan yang sering diajukan",
+                value="Read answers to frequently asked questions",
                 inline=False
             )
             
             embed.add_field(
-                name="💬 Chat dengan Support",
-                value="Hubungi tim support kami untuk bantuan lebih lanjut",
+                name="💬 Chat with Support",
+                value="Contact our support team for further assistance",
                 inline=False
             )
             
             embed.add_field(
-                name="📊 Status Order",
-                value="Cek status order Anda",
+                name="📊 Order Status",
+                value="Check your order status",
                 inline=False
             )
             
-            embed.set_footer(text="💡 Gunakan button di bawah untuk memilih opsi")
+            embed.set_footer(text="💡 Use the buttons below to select an option")
             
             await ctx.send(embed=embed, view=view)
-            event_logger.info(f"Support menu ditampilkan oleh {ctx.author}")
+            event_logger.info(f"Support menu displayed by {ctx.author}")
             
         except Exception as e:
-            event_logger.error(f"Error di support command: {str(e)}")
-            await ctx.send("❌ Terjadi error saat membuka support menu.", delete_after=10)
+            event_logger.error(f"Error in support command: {str(e)}")
+            await ctx.send("❌ An error occurred while opening support menu.", delete_after=10)
     
     @commands.command(
         name='faq',
-        description='Tampilkan daftar FAQ',
-        help='Tampilkan semua pertanyaan yang sering diajukan'
+        description='Display FAQ list',
+        help='Display all frequently asked questions'
     )
     async def faq_list(self, ctx: commands.Context) -> None:
-        """Command untuk menampilkan daftar FAQ."""
+        """Command to display FAQ list."""
         try:
             db = get_db_manager()
             faq_data = db.get_faq_data(refresh=True)
@@ -76,90 +76,90 @@ class SupportCommands(commands.Cog):
             if not faq_data:
                 embed = discord.Embed(
                     title="📖 FAQ",
-                    description="Tidak ada FAQ yang tersedia saat ini.",
+                    description="No FAQ available at this time.",
                     color=discord.Color.orange()
                 )
                 await ctx.send(embed=embed, delete_after=15)
                 return
             
-            # Buat embed untuk FAQ
+            # Create embed for FAQ
             embed = discord.Embed(
-                title="📖 Daftar Pertanyaan yang Sering Diajukan",
-                description="Klik button untuk melihat jawaban",
+                title="📖 Frequently Asked Questions",
+                description="Click button to view answer",
                 color=discord.Color.green()
             )
             
-            # Limit maksimal 25 buttons (Discord UI limit)
+            # Limit to 25 buttons (Discord UI limit)
             limited_faq = faq_data[:24]
             
             for idx, faq in enumerate(limited_faq, 1):
                 button_label = faq.get('button_label', f'FAQ {idx}')[:80]
                 embed.add_field(
                     name=f"{idx}. {button_label}",
-                    value="Klik button untuk melihat jawaban",
+                    value="Click button to view answer",
                     inline=False
                 )
             
-            # Buat view dengan FAQ buttons
+            # Create view with FAQ buttons
             view = FAQView(faq_data[:24])
             
             await ctx.send(embed=embed, view=view)
-            event_logger.info(f"FAQ list ditampilkan untuk {ctx.author}")
+            event_logger.info(f"FAQ list displayed for {ctx.author}")
             
         except Exception as e:
-            event_logger.error(f"Error di faq command: {str(e)}")
-            await ctx.send("❌ Gagal memuat FAQ.", delete_after=10)
+            event_logger.error(f"Error in faq command: {str(e)}")
+            await ctx.send("❌ Failed to load FAQ.", delete_after=10)
     
     @commands.command(
         name='reload',
-        description='Reload data dari Google Sheets',
-        help='Reload FAQ dan data lainnya dari Google Sheets',
+        description='Reload data from Google Sheets',
+        help='Reload FAQ and other data from Google Sheets',
         aliases=['refresh']
     )
     @commands.has_permissions(administrator=True)
     async def reload_data(self, ctx: commands.Context) -> None:
-        """Command admin untuk reload data dari Sheets."""
+        """Admin command to reload data from Sheets."""
         try:
             db = get_db_manager()
             db.reload_faq_cache()
             
             embed = discord.Embed(
                 title="✅ Data Reloaded",
-                description="Semua data berhasil di-reload dari Google Sheets.",
+                description="All data successfully reloaded from Google Sheets.",
                 color=discord.Color.green()
             )
             
             await ctx.send(embed=embed, delete_after=10)
-            event_logger.info(f"Data reloaded oleh {ctx.author}")
+            event_logger.info(f"Data reloaded by {ctx.author}")
             
         except Exception as e:
-            event_logger.error(f"Error di reload command: {str(e)}")
+            event_logger.error(f"Error in reload command: {str(e)}")
             embed = discord.Embed(
                 title="❌ Error",
-                description=f"Gagal reload data: {str(e)}",
+                description=f"Failed to reload data: {str(e)}",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed, delete_after=15)
     
     @commands.command(
         name='stats',
-        description='Tampilkan statistik support',
-        help='Tampilkan statistik dan info tentang bot'
+        description='Display support statistics',
+        help='Display statistics and info about bot'
     )
     @commands.has_permissions(administrator=True)
     async def show_stats(self, ctx: commands.Context) -> None:
-        """Command admin untuk menampilkan statistik."""
+        """Admin command to display statistics."""
         try:
             db = get_db_manager()
             leads = db.get_all_leads(limit=100)
             
-            # Hitung statistik
+            # Calculate statistics
             total_leads = len(leads)
             pending_count = sum(1 for lead in leads if lead.get('status') == 'PENDING')
             resolved_count = sum(1 for lead in leads if lead.get('status') == 'RESOLVED')
             
             embed = discord.Embed(
-                title="📊 Statistik Support Bot",
+                title="📊 Support Bot Statistics",
                 color=discord.Color.purple()
             )
             
@@ -190,23 +190,23 @@ class SupportCommands(commands.Cog):
             await ctx.send(embed=embed)
             
         except Exception as e:
-            event_logger.error(f"Error di stats command: {str(e)}")
-            await ctx.send("❌ Gagal menampilkan statistik.", delete_after=10)
+            event_logger.error(f"Error in stats command: {str(e)}")
+            await ctx.send("❌ Failed to display statistics.", delete_after=10)
 
 
 class SupportMenuView(View):
-    """View untuk support menu utama."""
+    """View for main support menu."""
     
     def __init__(self):
         super().__init__(timeout=600)
     
     @discord.ui.button(
-        label="📖 Lihat FAQ",
+        label="📖 View FAQ",
         style=discord.ButtonStyle.primary,
         custom_id="view_faq"
     )
     async def view_faq(self, interaction: discord.Interaction, button: Button) -> None:
-        """Button untuk melihat FAQ."""
+        """Button to view FAQ."""
         try:
             await interaction.response.defer()
             
@@ -216,16 +216,16 @@ class SupportMenuView(View):
             if not faq_data:
                 embed = discord.Embed(
                     title="📖 FAQ",
-                    description="Tidak ada FAQ tersedia.",
+                    description="No FAQ available.",
                     color=discord.Color.orange()
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 return
             
-            # Kirim FAQ list
+            # Send FAQ list
             embed = discord.Embed(
-                title="📖 Daftar FAQ",
-                description="Pilih FAQ yang ingin Anda lihat:",
+                title="📖 FAQ List",
+                description="Select the FAQ you want to view:",
                 color=discord.Color.green()
             )
             
@@ -233,58 +233,58 @@ class SupportMenuView(View):
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
             
         except Exception as e:
-            event_logger.error(f"Error di view_faq button: {str(e)}")
+            event_logger.error(f"Error in view_faq button: {str(e)}")
     
     @discord.ui.button(
-        label="💬 Hubungi Support",
+        label="💬 Contact Support",
         style=discord.ButtonStyle.success,
         custom_id="contact_support"
     )
     async def contact_support(self, interaction: discord.Interaction, button: Button) -> None:
-        """Button untuk hubungi support."""
+        """Button to contact support."""
         try:
-            # Tampilkan modal
+            # Display modal
             await interaction.response.send_modal(SupportModal())
-            event_logger.info(f"Support modal dibuka oleh {interaction.user}")
+            event_logger.info(f"Support modal opened by {interaction.user}")
             
         except Exception as e:
-            event_logger.error(f"Error di contact_support button: {str(e)}")
+            event_logger.error(f"Error in contact_support button: {str(e)}")
     
     @discord.ui.button(
-        label="📊 Cek Status",
+        label="📊 Check Status",
         style=discord.ButtonStyle.secondary,
         custom_id="check_status"
     )
     async def check_status(self, interaction: discord.Interaction, button: Button) -> None:
-        """Button untuk cek status order."""
+        """Button to check order status."""
         try:
             await interaction.response.defer(ephemeral=True)
             
             embed = discord.Embed(
-                title="📊 Cek Status Order",
-                description="Fitur ini sedang dalam pengembangan.",
+                title="📊 Check Order Status",
+                description="This feature is under development.",
                 color=discord.Color.blue()
             )
             embed.add_field(
                 name="💡 Tips",
-                value="Hubungi support kami untuk info status order Anda.",
+                value="Contact our support for your order status information.",
                 inline=False
             )
             
             await interaction.followup.send(embed=embed, ephemeral=True)
             
         except Exception as e:
-            event_logger.error(f"Error di check_status button: {str(e)}")
+            event_logger.error(f"Error in check_status button: {str(e)}")
 
 
 class FAQView(View):
-    """View untuk menampilkan FAQ buttons."""
+    """View to display FAQ buttons."""
     
     def __init__(self, faq_data: list):
         super().__init__(timeout=600)
         self.faq_data = faq_data
         
-        # Add buttons untuk setiap FAQ (max 25)
+        # Add buttons for each FAQ (max 25)
         for idx, faq in enumerate(faq_data[:24]):
             button_label = faq.get('button_label', f'FAQ {idx + 1}')[:80]
             trigger_id = str(faq.get('trigger_id', f'faq_{idx}'))
@@ -298,13 +298,13 @@ class FAQView(View):
             self.add_item(button)
     
     def create_faq_callback(self, faq: dict):
-        """Create callback untuk FAQ button."""
+        """Create callback for FAQ button."""
         async def faq_callback(interaction: discord.Interaction) -> None:
             try:
                 await interaction.response.defer(ephemeral=True)
                 
-                question = faq.get('button_label', 'Pertanyaan')
-                answer = faq.get('response_text', 'Jawaban tidak tersedia.')
+                question = faq.get('button_label', 'Question')
+                answer = faq.get('response_text', 'Answer not available.')
                 
                 embed = discord.Embed(
                     title=f"❓ {question}",
@@ -315,10 +315,10 @@ class FAQView(View):
                 embed.set_footer(text="FAQ Support Bot")
                 
                 await interaction.followup.send(embed=embed, ephemeral=True)
-                event_logger.info(f"FAQ dilihat oleh {interaction.user}: {question}")
+                event_logger.info(f"FAQ viewed by {interaction.user}: {question}")
                 
             except Exception as e:
-                event_logger.error(f"Error di FAQ callback: {str(e)}")
+                event_logger.error(f"Error in FAQ callback: {str(e)}")
         
         return faq_callback
 

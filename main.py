@@ -1,8 +1,8 @@
 """
-Discord Customer Support Bot dengan Google Sheets Integration
-Bot untuk mengelola customer support dengan admin panel di Google Sheets
+Discord Customer Support Bot with Google Sheets Integration
+Bot for managing customer support with admin panel in Google Sheets
 
-Author: Your Name
+Author: 7Fil
 Version: 1.0.0
 """
 
@@ -14,14 +14,14 @@ from config import DISCORD_TOKEN, PREFIX, DEBUG_MODE, DISCORD_GUILD_ID
 from utils.logger import bot_logger
 from handlers.database import init_db_manager
 
-# Intents configuration
+# Configure Discord intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.guilds = True
 intents.dm_messages = True
 
-# Bot initialization
+# Initialize Discord bot
 bot = commands.Bot(
     command_prefix=PREFIX,
     intents=intents,
@@ -30,14 +30,14 @@ bot = commands.Bot(
 )
 
 async def load_cogs():
-    """Load semua cogs dari handlers directory."""
+    """Load all cogs from handlers directory."""
     cogs_dir = 'handlers'
     
     for filename in os.listdir(cogs_dir):
         if filename.endswith('.py') and not filename.startswith('_'):
             cog_name = filename[:-3]
             
-            # Skip database.py karena itu module, bukan cog
+            # Skip database.py as it's a module, not a cog
             if cog_name == 'database':
                 continue
             
@@ -48,7 +48,7 @@ async def load_cogs():
                 bot_logger.error(f"❌ Failed to load cog {cog_name}: {str(e)}")
 
 async def main():
-    """Main function untuk menjalankan bot."""
+    """Main function to run the bot."""
     try:
         bot_logger.info("=" * 50)
         bot_logger.info("🤖 Initializing Discord Customer Support Bot")
