@@ -2,6 +2,23 @@
 
 Complete framework for building a Discord Customer Support Bot integrated with Google Sheets using Python.
 
+## 🎨 CLI Control Panel
+
+Interactive command-line interface for easy bot management with colored output and clean menus.
+
+**Launch the CLI:**
+```bash
+python cli_app.py
+```
+
+**CLI Features:**
+- 🎛️ **Start/Stop Bot** - Dynamic menu based on bot status
+- ⚙️ **Admin Role Settings** - Configure which roles have admin permissions
+- 📝 **FAQ Management** - Add/delete FAQs with multi-line support (ESC to finish)
+- 🔄 **Database Refresh** - Reload changes instantly
+- 📊 **View Logs** - Monitor bot activity with color-coded messages
+- 📈 **Bot Statistics** - See detailed connection status and server info
+
 ## 📋 Key Features
 
 - ✅ **Interactive Support Menu** - User-friendly buttons and modals
@@ -11,6 +28,7 @@ Complete framework for building a Discord Customer Support Bot integrated with G
 - ✅ **Staff Notifications** - Real-time notifications to support team
 - ✅ **Analytics** - Track support performance
 - ✅ **Logging System** - Complete audit trail of all activities
+- ✅ **CLI Control Panel** - Interactive command-line interface
 
 ## 🚀 Quick Start
 
@@ -34,6 +52,10 @@ copy .env.example .env
 # Edit .env with your credentials
 
 # 4. Run bot
+# Option A: Use CLI (Recommended)
+python cli_app.py
+
+# Option B: Use command line
 python main.py
 ```
 

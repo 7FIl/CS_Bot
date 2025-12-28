@@ -36,3 +36,27 @@ def setup_logger(name: str) -> logging.Logger:
 bot_logger = setup_logger('CS_Bot')
 db_logger = setup_logger('Database')
 event_logger = setup_logger('Events')
+
+
+def disable_console_logging():
+    """Disable console output for all loggers."""
+    for logger in [bot_logger, db_logger, event_logger]:
+        for handler in logger.handlers[:]:
+            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                logger.removeHandler(handler)
+
+
+def enable_console_logging():
+    """Re-enable console output for all loggers."""
+    for logger in [bot_logger, db_logger, event_logger]:
+        # Check if console handler already exists
+        has_console = any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) 
+                         for h in logger.handlers)
+        if not has_console:
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)

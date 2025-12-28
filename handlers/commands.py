@@ -179,9 +179,141 @@ class SupportCommands(commands.Cog):
                 inline=True
             )
             
+            embed.set_footer(text=f"Bot Prefix: {ctx.prefix}")
+            
+            await ctx.send(embed=embed)
+            event_logger.info(f"Stats command used by {ctx.author}")
+            
+        except Exception as e:
+            event_logger.error(f"Error in stats command: {str(e)}")
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to get statistics.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed, delete_after=15)
+    
+    @commands.command(
+        name='help',
+        description='Show help information',
+        help='Display all available commands and their descriptions'
+    )
+    async def help_command(self, ctx: commands.Context, command_name: str = None) -> None:
+        """Custom help command."""
+        try:
+            # Check if user is admin
+            is_admin = False
+            if ctx.guild:
+                import json
+                import os
+                admin_roles_file = "admin_roles.json"
+                if os.path.exists(admin_roles_file):
+                    try:
+                        with open(admin_roles_file, 'r') as f:
+                            data = json.load(f)
+                            admin_role_names = data.get('admin_roles', [])
+                            user_role_names = [role.name for role in ctx.author.roles]
+                            is_admin = any(role_name in admin_role_names for role_name in user_role_names)
+                    except:
+                        pass
+            
+            if command_name:
+                # Show help for specific command
+                cmd = self.bot.get_command(command_name)
+                if cmd is None:
+                    embed = discord.Embed(
+                        title="❌ Command Not Found",
+                        description=f"No command called '{command_name}' found.",
+                        color=discord.Color.red()
+                    )
+                    await ctx.send(embed=embed, delete_after=10)
+                    return
+                
+                # Check if user has permission to view this command
+                if cmd.checks and not is_admin:
+                    embed = discord.Embed(
+                        title="❌ No Permission",
+                        description=f"You don't have permission to view this command.",
+                        color=discord.Color.red()
+                    )
+                    await ctx.send(embed=embed, delete_after=10)
+                    return
+                
+                embed = discord.Embed(
+                    title=f"ℹ️ Help: {ctx.prefix}{cmd.name}",
+                    description=cmd.help or "No description available",
+                    color=discord.Color.blue()
+                )
+                
+                if cmd.aliases:
+                    embed.add_field(
+                        name="Aliases",
+                        value=", ".join(cmd.aliases),
+                        inline=False
+                    )
+                
+                usage = f"{ctx.prefix}{cmd.name}"
+                if cmd.signature:
+                    usage += f" {cmd.signature}"
+                embed.add_field(
+                    name="Usage",
+                    value=f"`{usage}`",
+                    inline=False
+                )
+                
+                await ctx.send(embed=embed)
+            else:
+                # Show all commands
+                embed = discord.Embed(
+                    title="📚 Available Commands",
+                    description=f"Use `{ctx.prefix}help <command>` for more info on a specific command.",
+                    color=discord.Color.green()
+                )
+                
+                # Get all commands
+                commands_list = []
+                for command in self.bot.commands:
+                    if not command.hidden:
+                        commands_list.append(command)
+                
+                # User commands
+                user_commands = [cmd for cmd in commands_list if not cmd.checks]
+                if user_commands:
+                    user_cmd_text = "\n".join([f"`{ctx.prefix}{cmd.name}` - {cmd.description or 'No description'}" for cmd in user_commands])
+                    embed.add_field(
+                        name="📖 User Commands",
+                        value=user_cmd_text,
+                        inline=False
+                    )
+                
+                # Admin commands - only show if user is admin
+                if is_admin:
+                    admin_commands = [cmd for cmd in commands_list if cmd.checks]
+                    if admin_commands:
+                        admin_cmd_text = "\n".join([f"`{ctx.prefix}{cmd.name}` - {cmd.description or 'No description'}" for cmd in admin_commands])
+                        embed.add_field(
+                            name="🔧 Admin Commands",
+                            value=admin_cmd_text,
+                            inline=False
+                        )
+                
+                embed.set_footer(text=f"Bot Prefix: {ctx.prefix}")
+                await ctx.send(embed=embed)
+            
+            event_logger.info(f"Help command used by {ctx.author}")
+            
+        except Exception as e:
+            event_logger.error(f"Error in help command: {str(e)}")
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to display help.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed, delete_after=15)
+            
             embed.add_field(
                 name="🤖 Bot Info",
-                value=f"Prefix: `!`\nVersion: 1.0.0",
+                value=f"Prefix: `!`\nVersion: 1.0.1",
                 inline=False
             )
             

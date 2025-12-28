@@ -221,7 +221,43 @@ async def notify_staff(
         # Create view with admin buttons
         admin_view = StaffTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
         
-        await staff_channel.send(embed=staff_embed, view=admin_view)
+        # Check if admin notification is enabled
+        import json
+        import os
+        notify_admins = True
+        try:
+            settings_file = "bot_settings.json"
+            if os.path.exists(settings_file):
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+                    notify_admins = settings.get('notify_admins_on_ticket', True)
+        except:
+            pass
+        
+        # Send notification with or without admin mention
+        if notify_admins:
+            # Load admin roles and tag them
+            admin_roles_file = "admin_roles.json"
+            admin_mentions = ""
+            if os.path.exists(admin_roles_file):
+                try:
+                    with open(admin_roles_file, 'r') as f:
+                        data = json.load(f)
+                        admin_role_names = data.get('admin_roles', [])
+                        if admin_role_names and staff_channel.guild:
+                            for role in staff_channel.guild.roles:
+                                if role.name in admin_role_names:
+                                    admin_mentions += f"{role.mention} "
+                except:
+                    pass
+            
+            if admin_mentions:
+                await staff_channel.send(content=f"🔔 {admin_mentions}", embed=staff_embed, view=admin_view)
+            else:
+                await staff_channel.send(embed=staff_embed, view=admin_view)
+        else:
+            await staff_channel.send(embed=staff_embed, view=admin_view)
+        
         event_logger.info(f"New ticket created: #{ticket_number} - Order: {order_id} - Private thread: {thread.id}")
         
         return thread
