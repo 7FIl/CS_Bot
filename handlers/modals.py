@@ -6,6 +6,7 @@ from utils.logger import event_logger
 from config import STAFF_NOTIFICATION_CHANNEL_ID, SUPPORT_CHANNEL_ID
 import pytz
 from datetime import datetime
+import asyncio
 
 class SupportModals(commands.Cog):
     """Cog to handle support modals and views."""
@@ -59,7 +60,7 @@ class SupportModal(Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         """Handle submission from modal."""
         try:
-            # Defer interaction
+            # Defer interaction immediately to prevent timeout (critical for slow operations)
             await interaction.response.defer(ephemeral=True)
             
             # Get data from input
@@ -69,9 +70,9 @@ class SupportModal(Modal):
             description = self.description.value.strip()
             discord_tag = f"{interaction.user.name}#{interaction.user.discriminator}"
             
-            # Save to database
+            # Save to database (async for better performance)
             db = get_db_manager()
-            success, ticket_number = db.save_lead(
+            success, ticket_number = await db.save_lead_async(
                 discord_tag=discord_tag,
                 name=name,
                 order_id=order_id,
@@ -149,6 +150,7 @@ async def notify_staff(
     """Create private thread in support channel and send notification to staff. Return thread object."""
     try:
         from handlers.commands import bot
+        import main
         
         if not bot:
             return
@@ -180,7 +182,7 @@ async def notify_staff(
         tz = pytz.timezone('Asia/Jakarta')
         now = datetime.now(tz).strftime('%d/%m/%Y %H:%M:%S')
         
-        # Send ticket info to thread for user
+        # Prepare embeds (can be done in parallel)
         user_embed = discord.Embed(
             title="📋 Your Support Ticket Details",
             description="Your ticket has been created and our support team will assist you soon.",
@@ -195,13 +197,6 @@ async def notify_staff(
         user_embed.add_field(name="📊 Status", value="⏳ Pending", inline=True)
         user_embed.set_footer(text="Wait for admin to take your ticket")
         
-        await thread.send(embed=user_embed)
-        
-        # Send view with unified close button (for user and admin)
-        view = UnifiedTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
-        await thread.send("You can close this ticket when resolved:", view=view)
-        
-        # Send notification to staff channel with admin buttons
         staff_embed = discord.Embed(
             title="🎫 NEW TICKET RECEIVED",
             description=f"User: {user.mention}",
@@ -218,38 +213,60 @@ async def notify_staff(
         staff_embed.add_field(name="⏰ Time", value=now, inline=True)
         staff_embed.add_field(name="🔗 Thread Link", value=thread.jump_url, inline=False)
         
-        # Create view with admin buttons
+        # Create views
+        view = UnifiedTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
         admin_view = StaffTicketView(user_id=user.id, order_id=order_id, thread_id=thread.id, ticket_number=ticket_number)
         
-        # Check if admin notification is enabled
-        import json
-        import os
-        notify_admins = True
+        # Send messages to thread (with error handling)
         try:
-            settings_file = "bot_settings.json"
-            if os.path.exists(settings_file):
-                with open(settings_file, 'r') as f:
-                    settings = json.load(f)
-                    notify_admins = settings.get('notify_admins_on_ticket', True)
-        except:
-            pass
+            # Send user embed
+            await thread.send(embed=user_embed)
+            # Send close button view
+            await thread.send("You can close this ticket when resolved:", view=view)
+        except Exception as thread_error:
+            event_logger.error(f"Error sending messages to thread: {str(thread_error)}")
         
-        # Send notification with or without admin mention
-        if notify_admins:
-            # Load admin roles and tag them
-            admin_roles_file = "admin_roles.json"
-            admin_mentions = ""
-            if os.path.exists(admin_roles_file):
+        # Get settings from cache (NO DISK READ!)
+        try:
+            bot_settings = main.get_bot_settings()
+            notify_admins = bot_settings.get('notify_admins_on_ticket', True)
+        except:
+            # Fallback to file read if cache not available
+            import json
+            import os
+            notify_admins = True
+            if os.path.exists('bot_settings.json'):
                 try:
-                    with open(admin_roles_file, 'r') as f:
-                        data = json.load(f)
-                        admin_role_names = data.get('admin_roles', [])
-                        if admin_role_names and staff_channel.guild:
-                            for role in staff_channel.guild.roles:
-                                if role.name in admin_role_names:
-                                    admin_mentions += f"{role.mention} "
+                    with open('bot_settings.json', 'r') as f:
+                        settings = json.load(f)
+                        notify_admins = settings.get('notify_admins_on_ticket', True)
                 except:
                     pass
+        
+        # Send notification to staff channel
+        if notify_admins:
+            # Get admin roles from cache (NO DISK READ!)
+            try:
+                admin_role_names = main.get_admin_roles()
+            except:
+                # Fallback to file read if cache not available
+                import json
+                import os
+                admin_role_names = []
+                if os.path.exists('admin_roles.json'):
+                    try:
+                        with open('admin_roles.json', 'r') as f:
+                            data = json.load(f)
+                            admin_role_names = data.get('admin_roles', [])
+                    except:
+                        pass
+            
+            admin_mentions = ""
+            
+            if admin_role_names and staff_channel.guild:
+                for role in staff_channel.guild.roles:
+                    if role.name in admin_role_names:
+                        admin_mentions += f"{role.mention} "
             
             if admin_mentions:
                 await staff_channel.send(content=f"🔔 {admin_mentions}", embed=staff_embed, view=admin_view)
@@ -285,14 +302,10 @@ class UnifiedTicketView(View):
     async def close_ticket(self, interaction: discord.Interaction, button: Button) -> None:
         """Close ticket - User or Admin with different access."""
         try:
-            # Check status from database
+            # Check status from database (OPTIMIZED: direct find instead of pulling 1000 records)
             db = get_db_manager()
-            all_leads = db.get_all_leads(limit=1000)
-            ticket_status = None
-            for lead in all_leads:
-                if str(lead.get('order_id', '')).strip() == str(self.order_id).strip():
-                    ticket_status = lead.get('status')
-                    break
+            lead = await db.find_lead_by_order_id_async(self.order_id)
+            ticket_status = lead.get('status') if lead else None
             
             # Determine if user or admin clicked
             is_user = interaction.user.id == self.user_id
@@ -309,7 +322,7 @@ class UnifiedTicketView(View):
                 await interaction.response.defer()
                 
                 # Update status to "Closed" (closed by user)
-                db.update_lead_status(self.order_id, "Closed")
+                await db.update_lead_status_async(self.order_id, "Closed")
                 
                 close_embed = discord.Embed(
                     title="✅ Ticket Closed",
@@ -323,7 +336,7 @@ class UnifiedTicketView(View):
                 await interaction.response.defer()
                 
                 # Update status to "Resolved" (resolved by admin)
-                db.update_lead_status(self.order_id, "Resolved")
+                await db.update_lead_status_async(self.order_id, "Resolved")
                 
                 close_embed = discord.Embed(
                     title="🔒 Ticket Resolved",
@@ -371,16 +384,12 @@ class StaffTicketView(View):
     async def take_ticket(self, interaction: discord.Interaction, button: Button) -> None:
         """Staff takes the ticket."""
         try:
-            # Check ticket status first
+            # Check ticket status first (OPTIMIZED: direct find instead of pulling 1000 records)
             db = get_db_manager()
             
-            # Get all leads and find by order_id
-            all_leads = db.get_all_leads(limit=1000)
-            ticket_status = None
-            for lead in all_leads:
-                if str(lead.get('order_id', '')).strip() == str(self.order_id).strip():
-                    ticket_status = lead.get('status')
-                    break
+            # Find specific lead by order_id
+            lead = await db.find_lead_by_order_id_async(self.order_id)
+            ticket_status = lead.get('status') if lead else None
             
             # If status is not PENDING, ticket is already handled/closed
             if ticket_status and ticket_status != 'PENDING':
@@ -399,7 +408,7 @@ class StaffTicketView(View):
             
             # Update status in database
             db = get_db_manager()
-            db.update_lead_status(self.order_id, "IN_PROGRESS")
+            await db.update_lead_status_async(self.order_id, "IN_PROGRESS")
             
             # Update tracking
             self.staff_member = staff_member.id

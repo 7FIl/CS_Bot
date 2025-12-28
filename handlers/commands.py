@@ -201,21 +201,27 @@ class SupportCommands(commands.Cog):
     async def help_command(self, ctx: commands.Context, command_name: str = None) -> None:
         """Custom help command."""
         try:
-            # Check if user is admin
+            # Check if user is admin (using cached data - NO DISK READ)
             is_admin = False
             if ctx.guild:
-                import json
-                import os
-                admin_roles_file = "admin_roles.json"
-                if os.path.exists(admin_roles_file):
-                    try:
-                        with open(admin_roles_file, 'r') as f:
-                            data = json.load(f)
-                            admin_role_names = data.get('admin_roles', [])
-                            user_role_names = [role.name for role in ctx.author.roles]
-                            is_admin = any(role_name in admin_role_names for role_name in user_role_names)
-                    except:
-                        pass
+                try:
+                    import main
+                    admin_role_names = main.get_admin_roles()
+                except:
+                    # Fallback to file read if cache not available
+                    import json
+                    import os
+                    admin_role_names = []
+                    if os.path.exists('admin_roles.json'):
+                        try:
+                            with open('admin_roles.json', 'r') as f:
+                                data = json.load(f)
+                                admin_role_names = data.get('admin_roles', [])
+                        except:
+                            pass
+                
+                user_role_names = [role.name for role in ctx.author.roles]
+                is_admin = any(role_name in admin_role_names for role_name in user_role_names)
             
             if command_name:
                 # Show help for specific command
@@ -313,7 +319,7 @@ class SupportCommands(commands.Cog):
             
             embed.add_field(
                 name="🤖 Bot Info",
-                value=f"Prefix: `!`\nVersion: 1.0.1",
+                value=f"Prefix: `!`\nVersion: 1.0.2",
                 inline=False
             )
             

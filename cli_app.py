@@ -3,7 +3,7 @@ Discord Bot CLI Control Panel
 Interactive CLI interface for managing the Discord Customer Support Bot
 
 Author: 7Fil
-Version: 1.0.1
+Version: 1.0.2
 """
 
 import os
@@ -16,6 +16,10 @@ from colorama import Fore, Back, Style, init
 
 # Initialize colorama for Windows
 init(autoreset=True)
+
+# Disable console logging BEFORE importing bot components
+from utils.logger import disable_console_logging
+disable_console_logging()
 
 # Import bot components
 from config import DISCORD_TOKEN, PREFIX, DEBUG_MODE, GOOGLE_SHEETS_ID
@@ -149,10 +153,6 @@ def run_bot_thread():
     global bot_instance, bot_running
     
     try:
-        # Disable console logging to keep CLI clean
-        from utils.logger import disable_console_logging
-        disable_console_logging()
-        
         # Create new event loop for this thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -302,6 +302,14 @@ def manage_admin_roles():
                     # Save immediately after adding
                     if save_admin_roles(roles):
                         print(f"{Fore.GREEN}✓ Role added and saved: {role_name}{Style.RESET_ALL}")
+                        # Reload bot cache if bot is running
+                        if bot_running:
+                            try:
+                                import main
+                                main.reload_json_cache()
+                                print(f"{Fore.GREEN}✓ Bot cache reloaded{Style.RESET_ALL}")
+                            except:
+                                pass
                     else:
                         roles.remove(role_name)  # Rollback if save fails
                 else:
@@ -320,6 +328,14 @@ def manage_admin_roles():
                             # Save immediately after removing
                             if save_admin_roles(roles):
                                 print(f"{Fore.GREEN}✓ Role removed and saved: {role_to_remove}{Style.RESET_ALL}")
+                                # Reload bot cache if bot is running
+                                if bot_running:
+                                    try:
+                                        import main
+                                        main.reload_json_cache()
+                                        print(f"{Fore.GREEN}✓ Bot cache reloaded{Style.RESET_ALL}")
+                                    except:
+                                        pass
                             else:
                                 roles.insert(idx, role_to_remove)  # Rollback if save fails
                         else:
@@ -369,6 +385,14 @@ def manage_settings():
             if save_settings(settings):
                 new_status = "enabled" if settings['notify_admins_on_ticket'] else "disabled"
                 print(f"\n{Fore.GREEN}✓ Admin notifications {new_status}!{Style.RESET_ALL}")
+                # Reload bot cache if bot is running
+                if bot_running:
+                    try:
+                        import main
+                        main.reload_json_cache()
+                        print(f"{Fore.GREEN}✓ Bot cache reloaded{Style.RESET_ALL}")
+                    except:
+                        pass
             else:
                 # Rollback if save fails
                 settings['notify_admins_on_ticket'] = current_value

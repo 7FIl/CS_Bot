@@ -1,5 +1,6 @@
 discord.py==2.3.2
 gspread==6.0.0
+gspread-asyncio
 oauth2client==4.1.3
 python-dotenv==1.0.0
 google-auth-httplib2==0.2.0

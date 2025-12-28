@@ -3,16 +3,65 @@ Discord Customer Support Bot with Google Sheets Integration
 Bot for managing customer support with admin panel in Google Sheets
 
 Author: 7Fil
-Version: 1.0.1
+Version: 1.0.2
 """
 
 import discord
 from discord.ext import commands
 import asyncio
 import os
+import json
 from config import DISCORD_TOKEN, PREFIX, DEBUG_MODE, DISCORD_GUILD_ID
 from utils.logger import bot_logger
 from handlers.database import init_db_manager
+
+# Global cache for JSON files (to avoid repeated disk reads)
+_json_cache = {
+    'admin_roles': None,
+    'bot_settings': None
+}
+
+def load_json_cache():
+    """Load JSON files into memory cache on bot startup."""
+    global _json_cache
+    
+    # Load admin_roles.json
+    try:
+        if os.path.exists('admin_roles.json'):
+            with open('admin_roles.json', 'r') as f:
+                _json_cache['admin_roles'] = json.load(f)
+                bot_logger.info(f"✅ Cached admin_roles.json: {len(_json_cache['admin_roles'].get('admin_roles', []))} roles")
+        else:
+            _json_cache['admin_roles'] = {'admin_roles': []}
+            bot_logger.warning("⚠️  admin_roles.json not found, using empty cache")
+    except Exception as e:
+        bot_logger.error(f"❌ Error loading admin_roles.json: {e}")
+        _json_cache['admin_roles'] = {'admin_roles': []}
+    
+    # Load bot_settings.json
+    try:
+        if os.path.exists('bot_settings.json'):
+            with open('bot_settings.json', 'r') as f:
+                _json_cache['bot_settings'] = json.load(f)
+                bot_logger.info(f"✅ Cached bot_settings.json")
+        else:
+            _json_cache['bot_settings'] = {'notify_admins_on_ticket': True}
+            bot_logger.warning("⚠️  bot_settings.json not found, using defaults")
+    except Exception as e:
+        bot_logger.error(f"❌ Error loading bot_settings.json: {e}")
+        _json_cache['bot_settings'] = {'notify_admins_on_ticket': True}
+
+def get_admin_roles() -> list:
+    """Get admin roles from cache."""
+    return _json_cache.get('admin_roles', {}).get('admin_roles', [])
+
+def get_bot_settings() -> dict:
+    """Get bot settings from cache."""
+    return _json_cache.get('bot_settings', {'notify_admins_on_ticket': True})
+
+def reload_json_cache():
+    """Reload JSON cache (call this after file changes)."""
+    load_json_cache()
 
 # Configure Discord intents
 intents = discord.Intents.default()
@@ -63,6 +112,10 @@ async def main():
         bot_logger.info("=" * 50)
         bot_logger.info("🤖 Initializing Discord Customer Support Bot")
         bot_logger.info("=" * 50)
+        
+        # Load JSON cache
+        bot_logger.info("📋 Loading JSON cache...")
+        load_json_cache()
         
         # Initialize database
         bot_logger.info("📊 Connecting to Google Sheets...")
