@@ -3,7 +3,7 @@ Discord Customer Support Bot with Google Sheets Integration
 Bot for managing customer support with admin panel in Google Sheets
 
 Author: 7Fil
-Version: 1.0.0
+Version: 1.0.1
 """
 
 import discord
@@ -26,12 +26,15 @@ bot = commands.Bot(
     command_prefix=PREFIX,
     intents=intents,
     debug=DEBUG_MODE,
-    help_command=commands.DefaultHelpCommand()
+    help_command=None  # Disable default help command (we'll create custom one)
 )
 
 async def load_cogs():
     """Load all cogs from handlers directory."""
     cogs_dir = 'handlers'
+    
+    # Get list of loaded extensions to avoid reloading
+    loaded_extensions = [ext for ext in bot.extensions.keys()]
     
     for filename in os.listdir(cogs_dir):
         if filename.endswith('.py') and not filename.startswith('_'):
@@ -41,8 +44,15 @@ async def load_cogs():
             if cog_name == 'database':
                 continue
             
+            extension_name = f'{cogs_dir}.{cog_name}'
+            
+            # Skip if already loaded
+            if extension_name in loaded_extensions:
+                bot_logger.info(f"⏭️  Skipped (already loaded): {cog_name}")
+                continue
+            
             try:
-                await bot.load_extension(f'{cogs_dir}.{cog_name}')
+                await bot.load_extension(extension_name)
                 bot_logger.info(f"✅ Loaded cog: {cog_name}")
             except Exception as e:
                 bot_logger.error(f"❌ Failed to load cog {cog_name}: {str(e)}")
@@ -77,9 +87,16 @@ async def main():
         raise
 
 if __name__ == "__main__":
+    # Only run directly if not imported by GUI
+    print("=" * 60)
+    print("Note: You can now use gui_app.py for a graphical interface!")
+    print("=" * 60)
+    print()
+    
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         bot_logger.info("⏹️  Bot stopped by user")
     except Exception as e:
         bot_logger.error(f"❌ Fatal error: {str(e)}")
+
